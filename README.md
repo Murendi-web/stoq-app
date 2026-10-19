@@ -1,6 +1,6 @@
 # Stoq
 Database-driven mobile app for South African small-retailer stock management.
-Built with React Native (Expo) + Firebase.
+
 
 ## What's already built
 
