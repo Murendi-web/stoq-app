@@ -28,6 +28,35 @@ Built with React Native (Expo) + Firebase, per Deliverable 3 (Modelling).
    npx expo start
    ```
    Scan the QR code with Expo Go on your phone, or press `a` for an Android emulator.
+ Deploying the backend
+
+```
+npm install -g firebase-tools
+firebase login
+firebase use --add            # select your Firebase project
+firebase deploy --only firestore:rules,firestore:indexes,functions
+```
+
+This deploys:
+- `firestore.rules` — shop-level data isolation + owner/staff permissions
+- `firestore.indexes.json` — composite indexes the sales/alerts queries need
+- `functions/` — `onProductWrite` (raises/resolves stockout alerts) and
+  `sendStockoutPush` (pushes a notification when an alert opens)
+
+## Project structure
+
+```
+src/
+  navigation/   Auth stack, bottom tabs, per-tab stacks
+  screens/      One folder per feature area (auth, dashboard, stock, sales, alerts, suppliers, settings)
+  components/   Shared UI (ProductCard, AlertBanner, QuantityStepper)
+  services/     All Firestore/Auth calls — screens never call Firebase directly
+  hooks/        useNetworkStatus, useOfflineQueue
+  context/      AuthContext (current user/shop/role), OfflineQueueContext
+  types/        TypeScript interfaces mirroring the ER model (Deliverable 3, Section 7)
+functions/      Cloud Functions (separate npm project, deployed separately)
+firestore.rules, firestore.indexes.json, firebase.json
+```
 
 
 
