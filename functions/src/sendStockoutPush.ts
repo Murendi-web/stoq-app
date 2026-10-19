@@ -11,7 +11,7 @@ const db = admin.firestore();
  * push a notification to every device token registered for this shop's
  * owner. Device tokens are expected to be written to
  * shops/{shopId}/deviceTokens/{token} by the client after FCM registration
- * (not built yet in the mobile app — see README "Next steps").
+
  */
 export const sendStockoutPush = functions.firestore
   .document("shops/{shopId}/alerts/{alertId}")

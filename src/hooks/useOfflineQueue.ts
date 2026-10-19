@@ -11,18 +11,7 @@ type ActionHandler = (payload: Record<string, unknown>) => Promise<void>;
  * Implements NFR3: sales and stock actions are queued locally when offline
  * and automatically synced once connectivity resumes.
  *
- * Every AsyncStorage call is wrapped in try/catch. On this project's current
- * dependency versions, AsyncStorage's native module doesn't actually work
- * under Expo Go's New Architecture (throws "Native module is null, cannot
- * access legacy storage") even though the module reference itself isn't
- * null — and this hook runs at app launch regardless of whether the user has
- * tapped anything, so an unguarded call here was producing an uncaught
- * promise rejection on every single app start. With AsyncStorage broken,
- * the queue simply can't persist between sessions right now: actions will
- * still try to write immediately while online, they just won't survive the
- * app being closed while offline. Run
- *   npx expo install @react-native-async-storage/async-storage
- * on your own machine to get the version this fully works with.
+ * Every AsyncStorage call is wrapped in try/catch. 
  */
 export function useOfflineQueue(handlers: Partial<Record<QueuedActionType, ActionHandler>>) {
   const isConnected = useNetworkStatus();

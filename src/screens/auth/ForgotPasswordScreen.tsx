@@ -18,8 +18,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
       await requestPasswordReset(email.trim());
       setSent(true);
     } catch (err: any) {
-      // Firebase deliberately doesn't say whether the email exists, to avoid
-      // leaking which emails are registered. Show the same success state either way.
+   
       setSent(true);
     } finally {
       setLoading(false);
