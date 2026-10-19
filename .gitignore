@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+functions/lib/
+functions/node_modules/
+.env
+
+.fake

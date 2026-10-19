@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Stoq",
+    "slug": "stoq-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#1F3864",
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 260,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Stoq needs camera access to scan product barcodes."
+        }
+      ]
+    ],
+    "extra": {
+      "firebase": {
+        "apiKey": "AIzaSyDNQADMJylw8kOBUibKEfeHqvMtfTk-sSc",
+        "authDomain": "stoq-a7f62.firebaseapp.com",
+        "projectId": "stoq-a7f62",
+        "storageBucket": "stoq-a7f62.appspot.com",
+        "messagingSenderId": "698011045575",
+        "appId": "1:698011045575:web:9ef97451457a29c9f478e2",
+        "measurementId": "G-JP3N70PSLZ"
+      }
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1F3864",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
