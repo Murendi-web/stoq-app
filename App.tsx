@@ -1,3 +1,4 @@
+// Test comment: pushed by Luthando on 2026-10-30 to verify GitHub sync is working
 import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
