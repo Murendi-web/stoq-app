@@ -21,6 +21,35 @@ import {
 import { auth, db, app as primaryApp } from "./firebase";
 import { AppUser, Shop, UserRole } from "../types";
 
+/** Turns Firebase Auth error codes into friendly messages. */
+export function getAuthErrorMessage(code?: string, fallback?: string): string {
+  switch (code) {
+    case "auth/wrong-password":
+      return "Incorrect password. Please try again.";
+    case "auth/user-not-found":
+      return "No account exists with this email address.";
+    case "auth/invalid-credential":
+      // Firebase returns this for BOTH cases when "email enumeration
+      // protection" is ON. Turn it off in the console to get the
+      // two separate messages above.
+      return "Incorrect email or password. Please try again.";
+    case "auth/invalid-email":
+      return "Invalid email address.";
+    case "auth/weak-password":
+      return "Invalid password. It must be at least 6 characters.";
+    case "auth/email-already-in-use":
+      return "An account with this email already exists.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a moment and try again.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection.";
+    case "auth/user-disabled":
+      return "This account has been disabled.";
+    default:
+      return fallback || "Something went wrong. Please try again.";
+  }
+}
+
 export async function registerOwner(params: {
   name: string;
   email: string;
@@ -81,17 +110,23 @@ export async function registerStaff(params: {
  * profile. login() throws "No profile found for this account" when that
  * doc is missing, so this revokes app access immediately even though their
  * underlying Firebase Auth account still technically exists (deleting that
- * fully requires Admin SDK, i.e. a Cloud Function — see FR7's push setup
- * for the same Blaze-plan dependency).
+ * fully requires Admin SDK, i.e. a Cloud Function).
  */
 export async function removeStaff(userId: string): Promise<void> {
   await deleteDoc(doc(db, "users", userId));
 }
 
 export async function login(email: string, password: string): Promise<AppUser> {
-  const credential = await signInWithEmailAndPassword(auth, email, password);
+  let credential;
+  try {
+    credential = await signInWithEmailAndPassword(auth, email, password);
+  } catch (err: any) {
+    throw new Error(getAuthErrorMessage(err?.code));
+  }
+
   const snap = await getDoc(doc(db, "users", credential.user.uid));
   if (!snap.exists()) {
+    await firebaseSignOut(auth);
     throw new Error("No profile found for this account. Contact your shop owner.");
   }
   return snap.data() as AppUser;
@@ -106,13 +141,20 @@ export async function requestPasswordReset(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
 }
 
-export function hasPermission(role: UserRole, action: "manageSuppliers" | "manageThresholds" | "viewReports" | "manageStaff"): boolean {
+export function hasPermission(
+  role: UserRole,
+  action: "manageSuppliers" | "manageThresholds" | "viewReports" | "manageStaff"
+): boolean {
   if (role === "owner") return true;
   return false;
 }
 
 export function subscribeToStaff(shopId: string, onChange: (staff: AppUser[]) => void) {
-  const q = query(collection(db, "users"), where("shopId", "==", shopId), where("role", "==", "staff"));
+  const q = query(
+    collection(db, "users"),
+    where("shopId", "==", shopId),
+    where("role", "==", "staff")
+  );
   return onSnapshot(q, (snapshot) => {
     onChange(snapshot.docs.map((d) => d.data() as AppUser));
   });
