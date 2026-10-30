@@ -25,6 +25,7 @@ export default function LoginScreen({ navigation }: any) {
   const onSubmit = async () => {
     if (loading) return;
 
+    // RB-05
     if (!email.trim() || !password) {
       Alert.alert(
         "Missing Details",
@@ -33,10 +34,16 @@ export default function LoginScreen({ navigation }: any) {
       return;
     }
 
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
     try {
       await login(email.trim(), password);
     } catch (err: any) {
+      // RB-03 / RB-04 / RB-11: message comes from authService
       Alert.alert(
         "Login Failed",
         err?.message ?? "Please check your details and try again."
