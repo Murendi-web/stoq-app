@@ -7,4 +7,4 @@ functions/lib/
 functions/node_modules/
 .env
 
-.fake
+.fake.idea/

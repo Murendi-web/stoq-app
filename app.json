@@ -22,7 +22,8 @@
         {
           "cameraPermission": "Stoq needs camera access to scan product barcodes."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "extra": {
       "firebase": {
