@@ -1,15 +1,62 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from "react-native";
+import {
+  View, Text, TextInput, TouchableOpacity,
+  FlatList, ScrollView, Alert, StyleSheet,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { useOfflineQueueContext } from "../../context/OfflineQueueContext";
 import { subscribeToProducts } from "../../services/productService";
 import { QuantityStepper } from "../../components/QuantityStepper";
-import { colors } from "../../theme/colors";
 import { Product } from "../../types";
+import { theme, commonStyles as c } from "../../theme/styles";
+
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
+const Icon = ({ name, size = 22 }: { name: IconName; size?: number }) =>
+  <Ionicons name={name} size={size} color={theme.black} />;
+
+const Header = ({ confirm }: { confirm: boolean }) => (
+  <>
+    <View style={s.row}>
+      <View style={{ flex: 1 }}>
+        <Text style={s.eyebrow}>STOQ INVENTORY</Text>
+        <Text style={c.heading}>
+          {confirm ? "Confirm Restock" : "Record Restock"}
+        </Text>
+        <Text style={c.subtitle}>
+          {confirm
+            ? "Review your new stock quantity."
+            : "Add new stock to your inventory."}
+        </Text>
+      </View>
+      <View style={[c.iconBox, s.headerIcon]}>
+        <Icon name={confirm ? "add-circle-outline" : "cube-outline"} size={28} />
+      </View>
+    </View>
+
+    <View style={[c.card, s.banner]}>
+      <View style={[c.iconBox, s.stepCircle]}>
+        <Text style={s.stepNumber}>{confirm ? "2" : "1"}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.title}>
+          {confirm ? "Restock details" : "Choose a product"}
+        </Text>
+        <Text style={s.small}>
+          {confirm
+            ? "Enter the quantity received"
+            : "Select the item you're restocking"}
+        </Text>
+      </View>
+    </View>
+  </>
+);
 
 export default function RestockScreen({ navigation }: any) {
   const { user } = useAuth();
   const { enqueue, isConnected } = useOfflineQueueContext();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Product | null>(null);
@@ -17,97 +64,287 @@ export default function RestockScreen({ navigation }: any) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.shopId) return;
     return subscribeToProducts(user.shopId, setProducts);
   }, [user?.shopId]);
 
-  const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const product = selected
+    ? products.find((p) => p.productId === selected.productId) ?? selected
+    : null;
+
+  const choose = (item: Product | null) => {
+    setSelected(item);
+    setQuantity(1);
+  };
 
   const onConfirm = async () => {
-    if (!user || !selected) return;
+    if (!user || !product || saving) return;
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      Alert.alert("Invalid quantity", "Please enter a valid quantity greater than zero.");
+      return;
+    }
+
     setSaving(true);
     try {
       await enqueue("RECORD_RESTOCK", {
         shopId: user.shopId,
-        productId: selected.productId,
+        productId: product.productId,
         type: "restock",
         quantityChanged: quantity,
         loggedByUserId: user.userId,
       });
+
       Alert.alert(
-        "Restock recorded",
-        isConnected ? "Stock quantity updated." : "You're offline — this restock will sync automatically once you're back online."
+        isConnected ? "Restock recorded" : "Restock queued",
+        isConnected
+          ? "Your restock has been submitted."
+          : "You're offline. This restock will sync automatically when your connection returns."
       );
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert("Could not record restock", err.message ?? "Please try again.");
+      Alert.alert("Could not record restock", err?.message ?? "Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  if (!selected) {
+  if (!product) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Select Product</Text>
-        <TextInput style={styles.search} placeholder="Search products..." value={search} onChangeText={setSearch} />
+      <View style={c.screen}>
         <FlatList
           data={filtered}
-          keyExtractor={(p) => p.productId}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.productRow} onPress={() => setSelected(item)}>
-              <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.productMeta}>Currently {item.currentQty} in stock</Text>
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No products match your search.</Text>}
+          keyExtractor={(item) => item.productId}
+          contentContainerStyle={[c.content, { flexGrow: 1 }]}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <>
+              <Header confirm={false} />
+              <Text style={c.label}>SEARCH YOUR INVENTORY</Text>
+              <View style={c.inputWrapper}>
+                <Ionicons name="search-outline" size={21} color={theme.muted} />
+                <TextInput
+                  style={c.input}
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder="Search products..."
+                  placeholderTextColor="#888"
+                  autoCapitalize="none"
+                />
+              </View>
+              <Text style={s.sectionTitle}>
+                Products ({filtered.length})
+              </Text>
+            </>
+          }
+          renderItem={({ item }) => {
+            const out = item.currentQty <= 0;
+            const low = !out && item.currentQty <= item.reorderThreshold;
+
+            return (
+              <TouchableOpacity
+                style={s.productCard}
+                onPress={() => choose(item)}
+              >
+                <View style={[c.iconBox, s.productIcon, {
+                  backgroundColor: out ? theme.pink
+                    : low ? theme.yellow : theme.blue,
+                }]}>
+                  <Icon name="cube-outline" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.bold} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <Text style={c.subtitle}>
+                    {item.currentQty} units in stock
+                  </Text>
+                  {(out || low) && (
+                    <Text style={s.warning}>
+                      {out ? "Out of stock" : "Low stock"}
+                    </Text>
+                  )}
+                </View>
+                <Icon name="chevron-forward" />
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Icon name="cube-outline" size={37} />
+              <Text style={s.title}>No products found</Text>
+              <Text style={[c.subtitle, { textAlign: "center" }]}>
+                Try another search or add products to your inventory first.
+              </Text>
+            </View>
+          }
         />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Record Restock</Text>
+    <ScrollView style={c.screen} contentContainerStyle={c.content}>
+      <Header confirm />
 
-      <Text style={styles.label}>Product</Text>
-      <TouchableOpacity style={styles.selectedBox} onPress={() => setSelected(null)}>
-        <Text style={styles.selectedText}>{selected.name}</Text>
-        <Text style={styles.changeText}>Change ▾</Text>
+      <Text style={s.sectionTitle}>Selected product</Text>
+      <TouchableOpacity
+        style={s.productCard}
+        onPress={() => choose(null)}
+        disabled={saving}
+      >
+        <View style={[c.iconBox, s.productIcon, {
+          backgroundColor: theme.purple,
+        }]}>
+          <Icon name="cube-outline" size={26} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.bold}>{product.name}</Text>
+          <Text style={c.subtitle}>
+            {product.currentQty} currently in stock
+          </Text>
+        </View>
+        <Text style={[s.bold, { textDecorationLine: "underline" }]}>
+          Change
+        </Text>
       </TouchableOpacity>
 
-      <Text style={styles.label}>Quantity Received</Text>
-      <QuantityStepper value={quantity} onChange={setQuantity} min={1} />
+      <View style={c.card}>
+        <Text style={s.title}>Quantity received</Text>
+        <View style={{ marginVertical: 18, alignItems: "flex-start" }}>
+          <QuantityStepper
+            value={quantity}
+            onChange={(value) =>
+              setQuantity(Math.max(1, Math.floor(value)))
+            }
+            min={1}
+          />
+        </View>
+        <Text style={c.subtitle}>
+          Enter the number of new units received.
+        </Text>
+      </View>
 
-      <Text style={styles.resultText}>
-        New stock level: {selected.currentQty + quantity} (was {selected.currentQty})
-      </Text>
+      <View style={[c.card, s.preview]}>
+        <View style={s.row}>
+          <Icon name="layers-outline" />
+          <Text style={s.title}>Stock Preview</Text>
+        </View>
+
+        <View style={[s.row, { justifyContent: "space-around" }]}>
+          <View style={s.stockColumn}>
+            <Text style={s.small}>Current</Text>
+            <Text style={s.stockNumber}>{product.currentQty}</Text>
+          </View>
+          <Icon name="arrow-forward" size={26} />
+          <View style={s.stockColumn}>
+            <Text style={s.small}>After Restock</Text>
+            <Text style={s.stockNumber}>
+              {product.currentQty + quantity}
+            </Text>
+          </View>
+        </View>
+
+        <View style={s.added}>
+          <Icon name="add-circle-outline" size={18} />
+          <Text style={s.bold}>+{quantity} units added</Text>
+        </View>
+      </View>
 
       {!isConnected && (
-        <Text style={styles.offlineNotice}>You're offline — this restock will be queued and synced automatically.</Text>
+        <View style={[s.productCard, {
+          backgroundColor: theme.yellow,
+        }]}>
+          <Icon name="cloud-offline-outline" />
+          <Text style={{ flex: 1, fontSize: 12, color: theme.black }}>
+            You're offline. This restock will be queued and synced
+            when your connection returns.
+          </Text>
+        </View>
       )}
 
-      <TouchableOpacity style={styles.confirmButton} onPress={onConfirm} disabled={saving}>
-        <Text style={styles.confirmButtonText}>{saving ? "Saving..." : "Confirm Restock"}</Text>
+      <TouchableOpacity
+        style={[c.button, saving && { opacity: 0.6 }]}
+        onPress={onConfirm}
+        disabled={saving}
+      >
+        <Icon name="checkmark-circle-outline" size={24} />
+        <Text style={c.buttonText}>
+          {saving ? "Saving..." : "Confirm Restock"}
+        </Text>
+        <Icon name="arrow-forward" />
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: colors.background },
-  title: { fontSize: 20, fontWeight: "800", color: colors.primary, marginBottom: 16 },
-  search: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, backgroundColor: colors.backgroundMuted, marginBottom: 12 },
-  productRow: { padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
-  productName: { fontWeight: "700", color: colors.text },
-  productMeta: { color: colors.muted, fontSize: 12, marginTop: 2 },
-  emptyText: { textAlign: "center", color: colors.muted, marginTop: 40 },
-  label: { fontSize: 12, color: colors.text, marginBottom: 6, marginTop: 16 },
-  selectedBox: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, backgroundColor: colors.backgroundMuted },
-  selectedText: { fontWeight: "700", color: colors.text },
-  changeText: { color: colors.primary, fontSize: 12 },
-  resultText: { marginTop: 20, color: colors.success, fontWeight: "600" },
-  offlineNotice: { color: colors.warning, fontSize: 12, marginTop: 16, textAlign: "center" },
-  confirmButton: { backgroundColor: colors.success, borderRadius: 10, padding: 16, alignItems: "center", marginTop: 24 },
-  confirmButtonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+const s = StyleSheet.create({
+  row: {
+    flexDirection: "row", alignItems: "center",
+    gap: 12, marginBottom: 20,
+  },
+  eyebrow: {
+    fontSize: 10, fontWeight: "900",
+    letterSpacing: 1.5, color: theme.muted,
+  },
+  headerIcon: {
+    width: 56, height: 56, backgroundColor: theme.green,
+  },
+  banner: {
+    flexDirection: "row", alignItems: "center",
+    gap: 12, backgroundColor: theme.yellow, padding: 15,
+    marginBottom: 25,
+  },
+  stepCircle: {
+    width: 39, height: 39, borderRadius: 20,
+    backgroundColor: theme.white,
+  },
+  stepNumber: {
+    fontSize: 19, fontWeight: "900", color: theme.black,
+  },
+  title: {
+    fontSize: 17, fontWeight: "900", color: theme.black,
+  },
+  small: {
+    fontSize: 12, color: theme.black, marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 20, fontWeight: "900",
+    color: theme.black, marginBottom: 15,
+  },
+  productCard: {
+    flexDirection: "row", alignItems: "center",
+    gap: 12, backgroundColor: theme.white,
+    borderWidth: 2, borderColor: theme.black,
+    borderRadius: 13, padding: 13, marginBottom: 12,
+  },
+  productIcon: { width: 46, height: 46 },
+  bold: {
+    fontSize: 14, fontWeight: "900", color: theme.black,
+  },
+  warning: {
+    fontSize: 11, fontWeight: "800",
+    color: "#B42332", marginTop: 4,
+  },
+  empty: {
+    ...c.card, borderStyle: "dashed",
+    alignItems: "center", padding: 30,
+  },
+  preview: { backgroundColor: theme.blue },
+  stockColumn: { alignItems: "center", flex: 1 },
+  stockNumber: {
+    fontSize: 31, fontWeight: "900",
+    color: theme.black, marginTop: 7,
+  },
+  added: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: 7,
+    backgroundColor: theme.green,
+    borderWidth: 2, borderColor: theme.black,
+    borderRadius: 10, padding: 10,
+  },
 });

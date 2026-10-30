@@ -1,0 +1,116 @@
+
+import { StyleSheet } from "react-native";
+
+export const theme = {
+  background: "#FFFDF7",
+  black: "#111111",
+  yellow: "#FFD426",
+  green: "#A5EA48",
+  purple: "#A58AFF",
+  pink: "#FF4F87",
+  blue: "#B9E5FF",
+  white: "#FFFFFF",
+  muted: "#666666",
+};
+
+export const commonStyles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.background,
+  },
+  content: {
+    padding: 18,
+    paddingBottom: 45,
+  },
+  card: {
+    backgroundColor: theme.white,
+    borderWidth: 2.5,
+    borderColor: theme.black,
+    borderRadius: 15,
+    padding: 18,
+    marginBottom: 23,
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: theme.black,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: theme.muted,
+    lineHeight: 19,
+    marginTop: 6,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: theme.black,
+    marginBottom: 9,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: theme.background,
+    borderWidth: 2,
+    borderColor: theme.black,
+    borderRadius: 11,
+    paddingHorizontal: 12,
+    marginBottom: 18,
+  },
+  input: {
+    flex: 1,
+    fontSize: 13,
+    color: theme.black,
+    paddingVertical: 14,
+    minWidth: 0,
+  },
+  button: {
+    backgroundColor: theme.green,
+    borderWidth: 2.5,
+    borderColor: theme.black,
+    borderRadius: 14,
+    padding: 17,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  buttonText: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: theme.black,
+  },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+    marginBottom: 22,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: theme.black,
+  },
+  iconBox: {
+    width: 43,
+    height: 43,
+    borderWidth: 2,
+    borderColor: theme.black,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+});

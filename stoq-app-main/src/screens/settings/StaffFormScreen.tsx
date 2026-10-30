@@ -54,23 +54,22 @@ export default function StaffFormScreen({ navigation }: any) {
   };
 
   const Field = ({
-    label, icon, value, onChangeText, ...props
-  }: any) => (
-    <>
-      <Text style={c.label}>{label}</Text>
-      <View style={c.inputWrapper}>
-        <Ionicons name={icon} size={20} color={theme.black} />
-        <TextInput
-          style={c.input}
-          value={value}
-          onChangeText={onChangeText}
-          editable={!loading}
-          placeholderTextColor="#888888"
-          {...props}
-        />
-      </View>
-    </>
-  );
+  label, icon, value, onChangeText, ...props
+}: any) => (
+  <>
+    <Text style={c.label}>{label}</Text>
+    <View style={c.inputWrapper}>
+      <Ionicons name={icon} size={20} color={theme.black} />
+      <TextInput
+        style={c.input}
+        value={value}
+        onChangeText={onChangeText}
+        placeholderTextColor="#888888"
+        {...props}
+      />
+    </View>
+  </>
+);
 
   const SectionTitle = ({ icon, title, background }: any) => (
     <View style={c.sectionHeading}>
@@ -146,6 +145,7 @@ export default function StaffFormScreen({ navigation }: any) {
             onChangeText={setName}
             placeholder="Staff member's full name"
             autoCapitalize="words"
+            editable={!loading}
           />
 
           <Field
@@ -157,6 +157,7 @@ export default function StaffFormScreen({ navigation }: any) {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!loading}
           />
         </View>
 

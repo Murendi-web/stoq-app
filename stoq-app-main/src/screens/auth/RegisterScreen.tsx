@@ -63,28 +63,27 @@ export default function RegisterScreen({ navigation }: any) {
   };
 
   const Field = ({
-    label, value, change, placeholder, ...props
-  }: {
-    label: string;
-    value: string;
-    change: (text: string) => void;
-    placeholder: string;
-  } & React.ComponentProps<typeof TextInput>) => (
-    <View>
-      <Text style={s.label}>
-        {label} <Text style={{ color: "#B42332" }}>*</Text>
-      </Text>
-      <TextInput
-        style={s.input}
-        placeholder={placeholder}
-        placeholderTextColor="#888888"
-        value={value}
-        onChangeText={change}
-        editable={!loading}
-        {...props}
-      />
-    </View>
-  );
+  label, value, change, placeholder, ...props
+}: {
+  label: string;
+  value: string;
+  change: (text: string) => void;
+  placeholder: string;
+} & React.ComponentProps<typeof TextInput>) => (
+  <View>
+    <Text style={s.label}>
+      {label} <Text style={{ color: "#B42332" }}>*</Text>
+    </Text>
+    <TextInput
+      style={s.input}
+      placeholder={placeholder}
+      placeholderTextColor="#888888"
+      value={value}
+      onChangeText={change}
+      {...props}
+    />
+  </View>
+);
 
   const Heading = ({
     icon, title, color,
@@ -154,6 +153,7 @@ export default function RegisterScreen({ navigation }: any) {
             change={setShopName}
             autoCapitalize="words"
             maxLength={100}
+            editable={!loading}
           />
           <Text style={s.helper}>
             This will be the name of your shop workspace.
