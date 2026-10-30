@@ -5,7 +5,7 @@ import {
   Alert, ActivityIndicator, StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { registerOwner } from "../../services/authService";
+import { registerOwner, getAuthErrorMessage } from "../../services/authService";
 import { theme, commonStyles as c } from "../../theme/styles";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -14,6 +14,46 @@ const Icon = ({ name, size = 22 }: {
   name: IconName;
   size?: number;
 }) => <Ionicons name={name} size={size} color={theme.black} />;
+
+// Moved OUTSIDE RegisterScreen: when defined inside, every keystroke created
+// a new component, remounted the TextInput and closed the keyboard.
+const Field = ({
+  label, value, change, placeholder, ...props
+}: {
+  label: string;
+  value: string;
+  change: (text: string) => void;
+  placeholder: string;
+} & React.ComponentProps<typeof TextInput>) => (
+  <View>
+    <Text style={s.label}>
+      {label} <Text style={{ color: "#B42332" }}>*</Text>
+    </Text>
+    <TextInput
+      style={s.input}
+      placeholder={placeholder}
+      placeholderTextColor="#888888"
+      value={value}
+      onChangeText={change}
+      {...props}
+    />
+  </View>
+);
+
+const Heading = ({
+  icon, title, color,
+}: {
+  icon: IconName;
+  title: string;
+  color: string;
+}) => (
+  <View style={c.sectionHeading}>
+    <View style={[c.iconBox, { backgroundColor: color }]}>
+      <Icon name={icon} size={23} />
+    </View>
+    <Text style={c.sectionTitle}>{title}</Text>
+  </View>
+);
 
 export default function RegisterScreen({ navigation }: any) {
   const [shopName, setShopName] = useState("");
@@ -56,50 +96,14 @@ export default function RegisterScreen({ navigation }: any) {
       });
       // AuthProvider handles navigation.
     } catch (err: any) {
-      Alert.alert("Registration Failed", err?.message ?? "Please try again.");
+      Alert.alert(
+        "Registration Failed",
+        getAuthErrorMessage(err?.code, err?.message ?? "Please try again.")
+      );
     } finally {
       setLoading(false);
     }
   };
-
-  const Field = ({
-    label, value, change, placeholder, ...props
-  }: {
-    label: string;
-    value: string;
-    change: (text: string) => void;
-    placeholder: string;
-  } & React.ComponentProps<typeof TextInput>) => (
-    <View>
-      <Text style={s.label}>
-        {label} <Text style={{ color: "#B42332" }}>*</Text>
-      </Text>
-      <TextInput
-        style={s.input}
-        placeholder={placeholder}
-        placeholderTextColor="#888888"
-        value={value}
-        onChangeText={change}
-        editable={!loading}
-        {...props}
-      />
-    </View>
-  );
-
-  const Heading = ({
-    icon, title, color,
-  }: {
-    icon: IconName;
-    title: string;
-    color: string;
-  }) => (
-    <View style={c.sectionHeading}>
-      <View style={[c.iconBox, { backgroundColor: color }]}>
-        <Icon name={icon} size={23} />
-      </View>
-      <Text style={c.sectionTitle}>{title}</Text>
-    </View>
-  );
 
   return (
     <KeyboardAvoidingView
@@ -154,6 +158,7 @@ export default function RegisterScreen({ navigation }: any) {
             change={setShopName}
             autoCapitalize="words"
             maxLength={100}
+            editable={!loading}
           />
           <Text style={s.helper}>
             This will be the name of your shop workspace.
@@ -173,6 +178,7 @@ export default function RegisterScreen({ navigation }: any) {
             change={setName}
             autoCapitalize="words"
             autoComplete="name"
+            editable={!loading}
           />
           <Field
             label="Email Address"
@@ -183,6 +189,7 @@ export default function RegisterScreen({ navigation }: any) {
             autoCorrect={false}
             keyboardType="email-address"
             autoComplete="email"
+            editable={!loading}
           />
         </View>
 

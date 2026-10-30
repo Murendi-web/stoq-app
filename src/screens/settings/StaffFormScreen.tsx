@@ -6,8 +6,38 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
-import { registerStaff } from "../../services/authService";
+import { registerStaff, getAuthErrorMessage } from "../../services/authService";
 import { theme, commonStyles as c } from "../../theme/styles";
+
+// These live OUTSIDE the screen component on purpose. If they are defined
+// inside it, React creates a brand-new component on every keystroke, which
+// remounts the TextInput and closes the keyboard after one character.
+const Field = ({
+  label, icon, value, onChangeText, ...props
+}: any) => (
+  <>
+    <Text style={c.label}>{label}</Text>
+    <View style={c.inputWrapper}>
+      <Ionicons name={icon} size={20} color={theme.black} />
+      <TextInput
+        style={c.input}
+        value={value}
+        onChangeText={onChangeText}
+        placeholderTextColor="#888888"
+        {...props}
+      />
+    </View>
+  </>
+);
+
+const SectionTitle = ({ icon, title, background }: any) => (
+  <View style={c.sectionHeading}>
+    <View style={[c.iconBox, { backgroundColor: background }]}>
+      <Ionicons name={icon} size={22} color={theme.black} />
+    </View>
+    <Text style={c.sectionTitle}>{title}</Text>
+  </View>
+);
 
 export default function StaffFormScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -47,39 +77,14 @@ export default function StaffFormScreen({ navigation }: any) {
       setSuccess(true);
       setPassword("");
     } catch (error: any) {
-      Alert.alert("Registration Failed", error?.message || "Unable to create the staff account.");
+      Alert.alert(
+        "Registration Failed",
+        getAuthErrorMessage(error?.code, error?.message)
+      );
     } finally {
       setLoading(false);
     }
   };
-
-  const Field = ({
-    label, icon, value, onChangeText, ...props
-  }: any) => (
-    <>
-      <Text style={c.label}>{label}</Text>
-      <View style={c.inputWrapper}>
-        <Ionicons name={icon} size={20} color={theme.black} />
-        <TextInput
-          style={c.input}
-          value={value}
-          onChangeText={onChangeText}
-          editable={!loading}
-          placeholderTextColor="#888888"
-          {...props}
-        />
-      </View>
-    </>
-  );
-
-  const SectionTitle = ({ icon, title, background }: any) => (
-    <View style={c.sectionHeading}>
-      <View style={[c.iconBox, { backgroundColor: background }]}>
-        <Ionicons name={icon} size={22} color={theme.black} />
-      </View>
-      <Text style={c.sectionTitle}>{title}</Text>
-    </View>
-  );
 
   if (success) {
     return (
@@ -146,6 +151,7 @@ export default function StaffFormScreen({ navigation }: any) {
             onChangeText={setName}
             placeholder="Staff member's full name"
             autoCapitalize="words"
+            editable={!loading}
           />
 
           <Field
@@ -157,6 +163,7 @@ export default function StaffFormScreen({ navigation }: any) {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!loading}
           />
         </View>
 
