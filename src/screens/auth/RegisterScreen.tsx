@@ -94,7 +94,16 @@ export default function RegisterScreen({ navigation }: any) {
         email: mail,
         password,
       });
-      // AuthProvider handles navigation.
+      setShopName("");
+      setName("");
+      setEmail("");
+      setPassword("");
+      setShowPassword(false);
+      Alert.alert(
+        "Shop Created!",
+        `${shop} has been set up successfully. Please log in to continue.`,
+        [{ text: "Go to Log In", onPress: () => navigation.navigate("Login") }]
+      );
     } catch (err: any) {
       Alert.alert(
         "Registration Failed",

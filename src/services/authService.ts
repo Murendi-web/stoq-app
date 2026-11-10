@@ -58,25 +58,38 @@ export async function registerOwner(params: {
   address?: string;
 }): Promise<AppUser> {
   const { name, email, password, shopName, address } = params;
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  const uid = credential.user.uid;
 
-  const shopData: Record<string, any> = {
-    shopId: uid,
-    shopName,
-    ownerId: uid,
-    createdAt: serverTimestamp(),
-  };
-  if (address && address.trim() !== "") {
-    shopData.address = address;
+  // Use a secondary Firebase app so the new account is created WITHOUT
+  // signing the main app in. The owner is sent to the login screen and
+  // signs in manually.
+  const secondaryApp = initializeApp(primaryApp.options, `owner-creation-${Date.now()}`);
+  const secondaryAuth = getAuth(secondaryApp);
+  const secondaryDb = getFirestore(secondaryApp);
+
+  try {
+    const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    const uid = credential.user.uid;
+
+    const shopData: Record<string, any> = {
+      shopId: uid,
+      shopName,
+      ownerId: uid,
+      createdAt: serverTimestamp(),
+    };
+    if (address && address.trim() !== "") {
+      shopData.address = address;
+    }
+
+    await setDoc(doc(secondaryDb, "shops", uid), shopData);
+
+    const user: AppUser = { userId: uid, shopId: uid, name, email, role: "owner" };
+    await setDoc(doc(secondaryDb, "users", uid), user);
+
+    await firebaseSignOut(secondaryAuth);
+    return user;
+  } finally {
+    await deleteApp(secondaryApp);
   }
-
-  await setDoc(doc(db, "shops", uid), shopData);
-
-  const user: AppUser = { userId: uid, shopId: uid, name, email, role: "owner" };
-  await setDoc(doc(db, "users", uid), user);
-
-  return user;
 }
 
 export async function registerStaff(params: {
