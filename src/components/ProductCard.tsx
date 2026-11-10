@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   View,
@@ -8,19 +7,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme, commonStyles as c } from "../theme/styles";
+import { Product } from "../types";
 
 type ProductCardProps = {
-  product: {
-    id: string;
-    name: string;
-    sku?: string;
-    barcode?: string;
-    quantity: number;
-    minStock?: number;
-    price?: number;
-    sellingPrice?: number;
-    category?: string;
-  };
+  product: Product;
   onPress?: () => void;
 };
 
@@ -28,11 +18,10 @@ export default function ProductCard({
   product,
   onPress,
 }: ProductCardProps) {
-  const quantity = Number(product.quantity ?? 0);
-  const minStock = Number(product.minStock ?? 5);
-  const price = Number(
-    product.sellingPrice ?? product.price ?? 0
-  );
+  // Read the real Product fields (unitPrice, currentQty, reorderThreshold)
+  const quantity = Number(product.currentQty ?? 0);
+  const minStock = Number(product.reorderThreshold ?? 5);
+  const price = Number(product.unitPrice ?? 0);
 
   const isOutOfStock = quantity <= 0;
   const isLowStock = !isOutOfStock && quantity <= minStock;
@@ -71,7 +60,7 @@ export default function ProductCard({
           </Text>
 
           <Text style={styles.productCode}>
-            {product.sku || product.barcode || "NO SKU"}
+            {product.barcode || "NO SKU"}
           </Text>
         </View>
 
