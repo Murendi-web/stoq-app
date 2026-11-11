@@ -8,10 +8,13 @@ import { useAuth } from "../../context/AuthContext";
 import {
   addProduct, updateProduct, deleteProduct, subscribeToProducts,
 } from "../../services/productService";
+// CHECK: use the exact function name exported by your supplierService.ts
+import { subscribeToSuppliers } from "../../services/supplierService";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { Dropdown } from "../../components/Dropdown";
 import { PRODUCT_CATEGORIES } from "../../constants/categories";
-import { Product } from "../../types";
+// CHECK: Supplier must be exported from your types file
+import { Product, Supplier } from "../../types";
 import { theme, commonStyles as c } from "../../theme/styles";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -56,12 +59,28 @@ export default function ProductFormScreen({ route, navigation }: any) {
 
   const [form, setForm] = useState({
     name: "", category: "", categoryOther: "", brand: "",
+    supplierId: "",
     barcode: "", unitPrice: "", currentQty: "", reorderThreshold: "",
   });
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
 
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  // Load this shop's suppliers for the dropdown
+  useEffect(() => {
+    if (!user?.shopId) return;
+    return subscribeToSuppliers(user.shopId, setSuppliers);
+  }, [user?.shopId]);
+
+  const supplierNames = suppliers.map((sp) => sp.name);
+  const selectedSupplier = suppliers.find((sp) => sp.supplierId === form.supplierId);
+
+  const onSelectSupplier = (name: string) => {
+    const match = suppliers.find((sp) => sp.name === name);
+    set("supplierId")(match?.supplierId ?? "");
+  };
 
   useEffect(() => {
     if (!user?.shopId || !productId) return;
@@ -80,6 +99,7 @@ export default function ProductFormScreen({ route, navigation }: any) {
         category: custom ? "Other" : p.category ?? "",
         categoryOther: custom ? p.category ?? "" : "",
         brand: p.brand ?? "",
+        supplierId: p.supplierId ?? "",
         barcode: prev.barcode || p.barcode || "",
         unitPrice: String(p.unitPrice),
         currentQty: String(p.currentQty),
@@ -98,7 +118,7 @@ export default function ProductFormScreen({ route, navigation }: any) {
   const onSave = async () => {
     if (!user || loading) return;
 
-    const { name, category, categoryOther, brand, barcode,
+    const { name, category, categoryOther, brand, supplierId, barcode,
       unitPrice, currentQty, reorderThreshold } = form;
 
     const price = Number(unitPrice);
@@ -127,6 +147,7 @@ export default function ProductFormScreen({ route, navigation }: any) {
       reorderThreshold: threshold,
       ...(finalCategory ? { category: finalCategory } : {}),
       ...(brand.trim() ? { brand: brand.trim() } : {}),
+      ...(supplierId ? { supplierId } : {}),
       ...(barcode.trim() ? { barcode: barcode.trim() } : {}),
     };
 
@@ -206,6 +227,17 @@ export default function ProductFormScreen({ route, navigation }: any) {
 
         <Field label="Brand (optional)" value={form.brand}
           onChange={set("brand")} placeholder="e.g. Coca-Cola" />
+
+        {suppliers.length > 0 ? (
+          <Dropdown label="Supplier (optional)"
+            value={selectedSupplier?.name ?? ""}
+            options={supplierNames} onSelect={onSelectSupplier}
+            placeholder="Select a supplier" />
+        ) : (
+          <Text style={{ fontSize: 12, color: theme.muted }}>
+            No suppliers yet. Add one under More, then Manage Suppliers.
+          </Text>
+        )}
       </Section>
 
       <Section title="Barcode" icon="barcode-outline" color={theme.purple}>

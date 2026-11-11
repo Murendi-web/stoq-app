@@ -1,6 +1,3 @@
-// Core domain types — mirror the ER model in Deliverable 3 (Section 7: Data Design).
-// Firestore paths are documented next to each type so services/ stay easy to trace
-// back to the data design.
 
 export type UserRole = "owner" | "staff";
 
