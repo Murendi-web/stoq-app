@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   runTransaction,
+  setDoc,
   query,
   where,
   orderBy,
@@ -14,9 +15,9 @@ import { notifyLowStock } from "./localAlert";
 
 /**
  * FR3: logs a sale and lowers the product's currentQty in one Firestore
- * transaction, so the two writes cannot drift apart. After the transaction
- * commits, a local notification fires if this sale took stock to or below
- * the reorder threshold.
+ * transaction. After it commits, every sale that leaves stock at or below
+ * the reorder threshold (a) writes/refreshes an open alert record, which the
+ * Alerts screen and dashboard read, and (b) shows a phone notification.
  */
 export async function logSale(params: {
   shopId: string;
@@ -29,7 +30,6 @@ export async function logSale(params: {
   const saleRef = doc(collection(db, "shops", shopId, "sales"));
   const productRef = doc(db, "shops", shopId, "products", productId);
 
-  let before = 0;
   let remaining = 0;
   let threshold = 0;
   let productName = "";
@@ -38,15 +38,14 @@ export async function logSale(params: {
     const productSnap = await tx.get(productRef);
     if (!productSnap.exists()) throw new Error("Product no longer exists.");
     const data = productSnap.data();
-    const currentQty = data.currentQty as number;
+    const currentQty = Number(data.currentQty);
     if (currentQty < quantitySold) {
       throw new Error(`Only ${currentQty} left in stock.`);
     }
 
     // Reassigned on every run, because Firestore may retry this callback.
-    before = currentQty;
     remaining = currentQty - quantitySold;
-    threshold = Number(data.reorderThreshold);
+    threshold = Number(data.reorderThreshold ?? data.reorderLevel ?? data.threshold ?? 0);
     productName = String(data.name ?? "Product");
 
     const sale: Omit<Sale, "saleId"> = {
@@ -61,10 +60,29 @@ export async function logSale(params: {
     tx.update(productRef, { currentQty: remaining });
   });
 
-  console.log("[sale] before:", before, "remaining:", remaining, "threshold:", threshold, "name:", productName);
+  console.log("[sale] remaining:", remaining, "threshold:", threshold, "name:", productName);
 
-  if (before > threshold && remaining <= threshold) {
-    console.log("[sale] threshold crossed, calling notifyLowStock");
+  if (remaining <= 0 || remaining <= threshold) {
+    // 1. Alert record for the Alerts screen. One record per product (id = productId),
+    //    refreshed on every low stock sale. Failure must never affect the sale.
+    try {
+      await setDoc(
+        doc(db, "shops", shopId, "alerts", productId),
+        {
+          productId,
+          productName,
+          currentQty: remaining,
+          triggeredAt: Timestamp.now(),
+          status: "open",
+        },
+        { merge: true }
+      );
+      console.log("[sale] alert record saved");
+    } catch (err) {
+      console.warn("Could not save the alert record.", err);
+    }
+
+    // 2. Phone notification.
     notifyLowStock(productName, remaining);
   }
 

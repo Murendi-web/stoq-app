@@ -1,21 +1,18 @@
 import * as Notifications from "expo-notifications";
+import { Alert } from "react-native";
 
-let handlerSet = false;
+// Set once, when the file loads, so it is always in place before any alert.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
-/** Sets up the display handler once and asks for permission the first time. */
 async function ensureReady(): Promise<boolean> {
-  if (!handlerSet) {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-    handlerSet = true;
-  }
   const { status } = await Notifications.getPermissionsAsync();
   if (status === "granted") return true;
   const request = await Notifications.requestPermissionsAsync();
@@ -23,21 +20,32 @@ async function ensureReady(): Promise<boolean> {
 }
 
 /**
- * Fires an immediate local notification. A failure here must never affect
- * the sale, so every error is caught and logged.
+ * Shows a low stock notification. If the phone blocks notifications or the
+ * call fails, an in-app alert is shown instead so the owner still sees it.
+ * Errors never affect the sale.
  */
 export async function notifyLowStock(productName: string, remaining: number): Promise<void> {
+  const title = remaining <= 0 ? "Out of stock" : "Low stock";
+  const body =
+    remaining <= 0
+      ? `${productName} is finished. Please restock.`
+      : `${productName} is running low, only ${remaining} left.`;
+
   try {
-    console.log("[alert] notifyLowStock called");
+    console.log("[alert] notifyLowStock called:", productName, remaining);
     const ready = await ensureReady();
     console.log("[alert] permission granted:", ready);
-    if (!ready) return;
+    if (!ready) {
+      Alert.alert(title, body);
+      return;
+    }
     const id = await Notifications.scheduleNotificationAsync({
-      content: { title: "Low stock", body: `${productName} is down to ${remaining}.` },
+      content: { title, body },
       trigger: null,
     });
     console.log("[alert] scheduled:", id);
   } catch (err) {
     console.warn("Could not show the low stock notification.", err);
+    Alert.alert(title, body);
   }
 }

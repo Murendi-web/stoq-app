@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore } from "firebase/firestore";
 import Constants from "expo-constants";
 
 // Pull config from app.json -> expo.extra.firebase (set via .env at build time).
@@ -16,14 +16,24 @@ const firebaseConfig = (Constants.expoConfig?.extra as any)?.firebase ?? {
 
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-
 let _auth: ReturnType<typeof getAuth>;
 try {
   _auth = initializeAuth(app);
 } catch {
-  // Fast refresh in dev calls this module more than once — fall back to the existing instance.
+  // Fast refresh in dev calls this module more than once, so fall back to the existing instance.
   _auth = getAuth(app);
 }
 
 export const auth = _auth;
-export const db = getFirestore(app);
+
+// Long polling is more reliable than the default WebChannel stream on React Native.
+// initializeFirestore throws if Firestore was already initialised (fast refresh),
+// so fall back to the existing instance.
+let _db: ReturnType<typeof getFirestore>;
+try {
+  _db = initializeFirestore(app, { experimentalForceLongPolling: true });
+} catch {
+  _db = getFirestore(app);
+}
+
+export const db = _db;
